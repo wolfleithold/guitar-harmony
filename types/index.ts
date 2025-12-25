@@ -1,9 +1,19 @@
+export type Readiness =
+  | "Idea"
+  | "Writing"
+  | "Practice"
+  | "GigReady"
+  | "Archived";
+
 export interface Song {
   id?: number;
   title: string;
   lyrics?: string;
   key?: string;
   guitar?: string;
+  readiness?: Readiness;
+  last_played_at?: string | null;
+  play_count?: number;
   created_at?: string;
   updated_at?: string;
 }

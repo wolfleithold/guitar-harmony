@@ -1,25 +1,62 @@
-'use client';
+"use client";
 
-import { useEffect, useState, use } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { Song, FileRecord } from '@/types';
+import { useEffect, useState, use } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Song, FileRecord, Readiness } from "@/types";
 
-export default function SongDetail({ params }: { params: Promise<{ id: string }> }) {
+export default function SongDetail({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const resolvedParams = use(params);
   const router = useRouter();
   const [song, setSong] = useState<Song | null>(null);
   const [files, setFiles] = useState<FileRecord[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
-    lyrics: '',
-    key: '',
-    guitar: '',
+    title: "",
+    lyrics: "",
+    key: "",
+    guitar: "",
+    readiness: "Writing" as Readiness,
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState('');
+  const [uploadProgress, setUploadProgress] = useState("");
+
+  const getReadinessColor = (readiness?: Readiness) => {
+    switch (readiness) {
+      case "Idea":
+        return "bg-purple-500";
+      case "Writing":
+        return "bg-blue-500";
+      case "Practice":
+        return "bg-yellow-500";
+      case "GigReady":
+        return "bg-green-500";
+      case "Archived":
+        return "bg-gray-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+  const formatRelativeTime = (dateString?: string | null) => {
+    if (!dateString) return "Never";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    if (diffDays < 365) return `${Math.floor(diffDays / 30)} months ago`;
+    return `${Math.floor(diffDays / 365)} years ago`;
+  };
 
   useEffect(() => {
     fetchSong();
@@ -34,15 +71,16 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
         setSong(data);
         setFormData({
           title: data.title,
-          lyrics: data.lyrics || '',
-          key: data.key || '',
-          guitar: data.guitar || '',
+          lyrics: data.lyrics || "",
+          key: data.key || "",
+          guitar: data.guitar || "",
+          readiness: data.readiness || "Writing",
         });
       } else {
-        console.error('Failed to fetch song');
+        console.error("Failed to fetch song");
       }
     } catch (error) {
-      console.error('Error fetching song:', error);
+      console.error("Error fetching song:", error);
     }
   };
 
@@ -54,7 +92,7 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
         setFiles(data);
       }
     } catch (error) {
-      console.error('Error fetching files:', error);
+      console.error("Error fetching files:", error);
     }
   };
 
@@ -64,9 +102,9 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
 
     try {
       const response = await fetch(`/api/songs/${resolvedParams.id}`, {
-        method: 'PUT',
+        method: "PUT",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -76,12 +114,12 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
         setSong(data);
         setIsEditing(false);
       } else {
-        console.error('Failed to update song');
-        alert('Failed to update song');
+        console.error("Failed to update song");
+        alert("Failed to update song");
       }
     } catch (error) {
-      console.error('Error updating song:', error);
-      alert('Error updating song');
+      console.error("Error updating song:", error);
+      alert("Error updating song");
     } finally {
       setSaving(false);
     }
@@ -92,11 +130,15 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
     if (!file) return;
 
     // Validate file type
-    const validExtensions = ['.zip', '.mp3', '.wav'];
-    const fileExt = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
-    
+    const validExtensions = [".zip", ".mp3", ".wav"];
+    const fileExt = file.name
+      .toLowerCase()
+      .substring(file.name.lastIndexOf("."));
+
     if (!validExtensions.includes(fileExt)) {
-      alert('Invalid file type. Only .zip (Logic Pro), .mp3, and .wav files are allowed.');
+      alert(
+        "Invalid file type. Only .zip (Logic Pro), .mp3, and .wav files are allowed."
+      );
       return;
     }
 
@@ -105,54 +147,69 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const response = await fetch(`/api/songs/${resolvedParams.id}/files`, {
-        method: 'POST',
+        method: "POST",
         body: formData,
       });
 
       if (response.ok) {
-        setUploadProgress('Upload complete!');
+        setUploadProgress("Upload complete!");
         fetchFiles();
         // Clear the input
-        e.target.value = '';
+        e.target.value = "";
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to upload file');
+        alert(error.error || "Failed to upload file");
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      alert('Error uploading file');
+      console.error("Error uploading file:", error);
+      alert("Error uploading file");
     } finally {
       setUploading(false);
-      setTimeout(() => setUploadProgress(''), 3000);
+      setTimeout(() => setUploadProgress(""), 3000);
     }
   };
 
   const handleFileDelete = async (fileId: number) => {
-    if (!confirm('Are you sure you want to delete this file?')) return;
+    if (!confirm("Are you sure you want to delete this file?")) return;
 
     try {
       const response = await fetch(`/api/files/${fileId}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
         fetchFiles();
       } else {
-        alert('Failed to delete file');
+        alert("Failed to delete file");
       }
     } catch (error) {
-      console.error('Error deleting file:', error);
-      alert('Error deleting file');
+      console.error("Error deleting file:", error);
+      alert("Error deleting file");
     }
   };
+  const handleMarkAsPlayed = async () => {
+    try {
+      const response = await fetch(`/api/songs/${resolvedParams.id}/played`, {
+        method: "POST",
+      });
 
+      if (response.ok) {
+        fetchSong();
+      } else {
+        alert("Failed to mark as played");
+      }
+    } catch (error) {
+      console.error("Error marking as played:", error);
+      alert("Error marking as played");
+    }
+  };
   const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   if (!song) {
@@ -233,6 +290,78 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Status
+              </label>
+              <div className="flex gap-3 items-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, readiness: "Idea" })
+                  }
+                  className={`w-12 h-12 rounded-full border-4 transition-all ${
+                    formData.readiness === "Idea"
+                      ? "bg-purple-500 border-purple-700 scale-110"
+                      : "bg-purple-300 border-purple-400 hover:scale-105"
+                  }`}
+                  title="Idea"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, readiness: "Writing" })
+                  }
+                  className={`w-12 h-12 rounded-full border-4 transition-all ${
+                    formData.readiness === "Writing"
+                      ? "bg-blue-500 border-blue-700 scale-110"
+                      : "bg-blue-300 border-blue-400 hover:scale-105"
+                  }`}
+                  title="Writing"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, readiness: "Practice" })
+                  }
+                  className={`w-12 h-12 rounded-full border-4 transition-all ${
+                    formData.readiness === "Practice"
+                      ? "bg-yellow-500 border-yellow-700 scale-110"
+                      : "bg-yellow-300 border-yellow-400 hover:scale-105"
+                  }`}
+                  title="Practice"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, readiness: "GigReady" })
+                  }
+                  className={`w-12 h-12 rounded-full border-4 transition-all ${
+                    formData.readiness === "GigReady"
+                      ? "bg-green-500 border-green-700 scale-110"
+                      : "bg-green-300 border-green-400 hover:scale-105"
+                  }`}
+                  title="Gig Ready"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, readiness: "Archived" })
+                  }
+                  className={`w-12 h-12 rounded-full border-4 transition-all ${
+                    formData.readiness === "Archived"
+                      ? "bg-gray-500 border-gray-700 scale-110"
+                      : "bg-gray-300 border-gray-400 hover:scale-105"
+                  }`}
+                  title="Archived"
+                />
+              </div>
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Selected:{" "}
+                <span className="font-semibold">{formData.readiness}</span>
+              </p>
+            </div>
+
+            <div>
               <label
                 htmlFor="lyrics"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -256,7 +385,7 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                 disabled={saving}
                 className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-6 rounded-lg shadow transition"
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? "Saving..." : "Save Changes"}
               </button>
               <button
                 type="button"
@@ -264,9 +393,10 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                   setIsEditing(false);
                   setFormData({
                     title: song.title,
-                    lyrics: song.lyrics || '',
-                    key: song.key || '',
-                    guitar: song.guitar || '',
+                    lyrics: song.lyrics || "",
+                    key: song.key || "",
+                    guitar: song.guitar || "",
+                    readiness: song.readiness || "Writing",
                   });
                 }}
                 className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition"
@@ -278,15 +408,40 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
         ) : (
           <div>
             <div className="flex justify-between items-start mb-6">
-              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                {song.title}
-              </h1>
-              <button
-                onClick={() => setIsEditing(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition"
-              >
-                Edit
-              </button>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                    {song.title}
+                  </h1>
+                  <div
+                    className={`w-10 h-10 rounded-full ${getReadinessColor(
+                      song.readiness
+                    )} border-2 border-gray-300 dark:border-gray-600 shadow-md flex-shrink-0`}
+                    title={song.readiness || "Writing"}
+                  />
+                </div>
+                <div className="flex gap-4 text-sm text-gray-600 dark:text-gray-400">
+                  <span>
+                    Last played: {formatRelativeTime(song.last_played_at)}
+                  </span>
+                  <span>•</span>
+                  <span>Play count: {song.play_count || 0}</span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleMarkAsPlayed}
+                  className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition"
+                >
+                  Mark as Played
+                </button>
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg shadow transition"
+                >
+                  Edit
+                </button>
+              </div>
             </div>
 
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6 space-y-4">
@@ -295,7 +450,9 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Key
                   </h3>
-                  <p className="mt-1 text-gray-900 dark:text-white">{song.key}</p>
+                  <p className="mt-1 text-gray-900 dark:text-white">
+                    {song.key}
+                  </p>
                 </div>
               )}
 
@@ -304,7 +461,9 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
                     Guitar
                   </h3>
-                  <p className="mt-1 text-gray-900 dark:text-white">{song.guitar}</p>
+                  <p className="mt-1 text-gray-900 dark:text-white">
+                    {song.guitar}
+                  </p>
                 </div>
               )}
 
@@ -368,12 +527,14 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                           {file.original_name}
                         </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {file.file_type === 'logic' ? 'Logic Pro Project' : 'Audio File'} •{' '}
-                          {formatFileSize(file.file_size)}
+                          {file.file_type === "logic"
+                            ? "Logic Pro Project"
+                            : "Audio File"}{" "}
+                          • {formatFileSize(file.file_size)}
                         </p>
                       </div>
                       <div className="flex gap-2 ml-4">
-                        {file.file_type === 'audio' && (
+                        {file.file_type === "audio" && (
                           <audio
                             controls
                             className="h-10"
@@ -386,9 +547,9 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                           download={file.original_name}
                           className="bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
                         >
-                          {file.file_type === 'logic'
-                            ? 'Download & Open in Logic Pro'
-                            : 'Download'}
+                          {file.file_type === "logic"
+                            ? "Download & Open in Logic Pro"
+                            : "Download"}
                         </a>
                         <button
                           onClick={() => handleFileDelete(file.id!)}

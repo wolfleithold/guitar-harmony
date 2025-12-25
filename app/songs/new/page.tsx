@@ -1,16 +1,18 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Readiness } from "@/types";
 
 export default function NewSong() {
   const router = useRouter();
   const [formData, setFormData] = useState({
-    title: '',
-    lyrics: '',
-    key: '',
-    guitar: '',
+    title: "",
+    lyrics: "",
+    key: "",
+    guitar: "",
+    readiness: "Writing" as Readiness,
   });
   const [saving, setSaving] = useState(false);
 
@@ -19,10 +21,10 @@ export default function NewSong() {
     setSaving(true);
 
     try {
-      const response = await fetch('/api/songs', {
-        method: 'POST',
+      const response = await fetch("/api/songs", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -31,12 +33,12 @@ export default function NewSong() {
         const data = await response.json();
         router.push(`/songs/${data.id}`);
       } else {
-        console.error('Failed to create song');
-        alert('Failed to create song');
+        console.error("Failed to create song");
+        alert("Failed to create song");
       }
     } catch (error) {
-      console.error('Error creating song:', error);
-      alert('Error creating song');
+      console.error("Error creating song:", error);
+      alert("Error creating song");
     } finally {
       setSaving(false);
     }
@@ -118,6 +120,76 @@ export default function NewSong() {
           </div>
 
           <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              Status
+            </label>
+            <div className="flex gap-3 items-center">
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, readiness: "Idea" })}
+                className={`w-12 h-12 rounded-full border-4 transition-all ${
+                  formData.readiness === "Idea"
+                    ? "bg-purple-500 border-purple-700 scale-110"
+                    : "bg-purple-300 border-purple-400 hover:scale-105"
+                }`}
+                title="Idea"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, readiness: "Writing" })
+                }
+                className={`w-12 h-12 rounded-full border-4 transition-all ${
+                  formData.readiness === "Writing"
+                    ? "bg-blue-500 border-blue-700 scale-110"
+                    : "bg-blue-300 border-blue-400 hover:scale-105"
+                }`}
+                title="Writing"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, readiness: "Practice" })
+                }
+                className={`w-12 h-12 rounded-full border-4 transition-all ${
+                  formData.readiness === "Practice"
+                    ? "bg-yellow-500 border-yellow-700 scale-110"
+                    : "bg-yellow-300 border-yellow-400 hover:scale-105"
+                }`}
+                title="Practice"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, readiness: "GigReady" })
+                }
+                className={`w-12 h-12 rounded-full border-4 transition-all ${
+                  formData.readiness === "GigReady"
+                    ? "bg-green-500 border-green-700 scale-110"
+                    : "bg-green-300 border-green-400 hover:scale-105"
+                }`}
+                title="Gig Ready"
+              />
+              <button
+                type="button"
+                onClick={() =>
+                  setFormData({ ...formData, readiness: "Archived" })
+                }
+                className={`w-12 h-12 rounded-full border-4 transition-all ${
+                  formData.readiness === "Archived"
+                    ? "bg-gray-500 border-gray-700 scale-110"
+                    : "bg-gray-300 border-gray-400 hover:scale-105"
+                }`}
+                title="Archived"
+              />
+            </div>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Selected:{" "}
+              <span className="font-semibold">{formData.readiness}</span>
+            </p>
+          </div>
+
+          <div>
             <label
               htmlFor="lyrics"
               className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
@@ -142,7 +214,7 @@ export default function NewSong() {
               disabled={saving}
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-6 rounded-lg shadow transition"
             >
-              {saving ? 'Creating...' : 'Create Song'}
+              {saving ? "Creating..." : "Create Song"}
             </button>
             <Link
               href="/"
