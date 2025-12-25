@@ -3,16 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-interface Song {
-  id: number;
-  title: string;
-  lyrics?: string;
-  key?: string;
-  guitar?: string;
-  created_at: string;
-  updated_at: string;
-}
+import { Song } from '@/types';
 
 export default function Home() {
   const [songs, setSongs] = useState<Song[]>([]);
@@ -135,7 +126,7 @@ export default function Home() {
                     {song.title}
                   </h2>
                   <button
-                    onClick={(e) => handleDelete(song.id, e)}
+                    onClick={(e) => handleDelete(song.id!, e)}
                     className="ml-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-sm font-medium"
                   >
                     Delete
@@ -160,7 +151,7 @@ export default function Home() {
                   )}
                 </div>
                 <div className="mt-4 text-xs text-gray-500 dark:text-gray-500">
-                  Updated: {new Date(song.updated_at).toLocaleDateString()}
+                  Updated: {new Date(song.updated_at!).toLocaleDateString()}
                 </div>
               </Link>
             ))}

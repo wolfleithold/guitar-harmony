@@ -3,26 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-
-interface Song {
-  id: number;
-  title: string;
-  lyrics?: string;
-  key?: string;
-  guitar?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface FileRecord {
-  id: number;
-  song_id: number;
-  filename: string;
-  original_name: string;
-  file_type: string;
-  file_size: number;
-  created_at: string;
-}
+import { Song, FileRecord } from '@/types';
 
 export default function SongDetail({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params);
@@ -339,8 +320,8 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
               )}
 
               <div className="text-xs text-gray-500 dark:text-gray-500 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <p>Created: {new Date(song.created_at).toLocaleString()}</p>
-                <p>Updated: {new Date(song.updated_at).toLocaleString()}</p>
+                <p>Created: {new Date(song.created_at!).toLocaleString()}</p>
+                <p>Updated: {new Date(song.updated_at!).toLocaleString()}</p>
               </div>
             </div>
 
@@ -397,6 +378,7 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                             controls
                             className="h-10"
                             src={`/api/files/${file.id}`}
+                            aria-label={`Play ${file.original_name}`}
                           />
                         )}
                         <a
@@ -409,7 +391,7 @@ export default function SongDetail({ params }: { params: Promise<{ id: string }>
                             : 'Download'}
                         </a>
                         <button
-                          onClick={() => handleFileDelete(file.id)}
+                          onClick={() => handleFileDelete(file.id!)}
                           className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition text-sm"
                         >
                           Delete

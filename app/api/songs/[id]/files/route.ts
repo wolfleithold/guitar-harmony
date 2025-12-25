@@ -4,7 +4,6 @@ import { writeFile } from 'fs/promises';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 
-// We need to install uuid
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -102,10 +101,3 @@ export async function POST(
     );
   }
 }
-
-// Disable body parser to handle file uploads
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

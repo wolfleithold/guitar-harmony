@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { Song, FileRecord } from '@/types';
 
 const dbPath = path.join(process.cwd(), 'guitar-harmony.db');
 
@@ -52,26 +53,7 @@ function initDb(database: Database.Database) {
   `);
 }
 
-export interface Song {
-  id?: number;
-  title: string;
-  lyrics?: string;
-  key?: string;
-  guitar?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface FileRecord {
-  id?: number;
-  song_id: number;
-  filename: string;
-  original_name: string;
-  file_type: string;
-  file_path: string;
-  file_size: number;
-  created_at?: string;
-}
+export type { Song, FileRecord };
 
 // Song CRUD operations
 export function createSong(song: Song): number {
@@ -110,7 +92,7 @@ export function searchSongs(query: string): Song[] {
 export function updateSong(id: number, song: Partial<Song>): void {
   const db = getDb();
   const fields: string[] = [];
-  const values: any[] = [];
+  const values: (string | number)[] = [];
 
   if (song.title !== undefined) {
     fields.push('title = ?');
@@ -148,7 +130,7 @@ export function deleteSong(id: number): void {
     try {
       fs.unlinkSync(file.file_path);
     } catch (err) {
-      console.error(`Failed to delete file ${file.file_path}:`, err);
+      console.error(`Failed to delete file ${file.file_path} for song ${id}:`, err);
     }
   }
   
@@ -195,7 +177,7 @@ export function deleteFile(id: number): void {
     try {
       fs.unlinkSync(file.file_path);
     } catch (err) {
-      console.error(`Failed to delete file ${file.file_path}:`, err);
+      console.error(`Failed to delete file ${file.file_path} with id ${id}:`, err);
     }
     
     const stmt = db.prepare('DELETE FROM files WHERE id = ?');
