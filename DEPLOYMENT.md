@@ -15,39 +15,52 @@ Your app is now configured to work with Vercel! Here's how to deploy it:
 2. Import your Git repository
 3. Vercel will auto-detect Next.js settings ✅
 
-### 2. Add Vercel Postgres Database
+### 2. Add Postgres Database (via Neon)
+
+1. In your Vercel project dashboard, go to the **Marketplace** tab
+2. Find **Neon** (Serverless Postgres) - it's the recommended option
+3. Click **Add** or **Connect**
+4. Follow the prompts to create a Neon account (if needed) and database
+5. Choose a database name (e.g., "guitar-harmony-db")
+6. Click **Create & Connect**
+7. Vercel will automatically add the `POSTGRES_URL` environment variable
+   - Note: Neon also provides connection pooling and other optimization features
+
+**Alternative:** You can also use Prisma Postgres, Supabase, or any other Postgres provider from the marketplace. The app works with any standard PostgreSQL database.
+
+### 3. Add Blob Storage
+
+Vercel Blob is still available in the Storage tab:
 
 1. In your Vercel project dashboard, go to the **Storage** tab
-2. Click **Create Database**
-3. Select **Postgres**
-4. Choose a database name (e.g., "guitar-harmony-db")
-5. Click **Create**
-6. Vercel will automatically add these environment variables to your project:
-   - `POSTGRES_URL`
-   - `POSTGRES_PRISMA_URL`
-   - `POSTGRES_URL_NON_POOLING`
-   - `POSTGRES_USER`
-   - `POSTGRES_HOST`
-   - `POSTGRES_PASSWORD`
-   - `POSTGRES_DATABASE`
-
-### 3. Add Vercel Blob Storage
-
-1. In your Vercel project dashboard, go to the **Storage** tab
-2. Click **Create Database** (or **Add Storage**)
-3. Select **Blob**
-4. Choose a store name (e.g., "guitar-files")
-5. Click **Create**
-6. Vercel will automatically add:
+2. Click **Create** and select **Blob**
+3. Choose a store name (e.g., "guitar-files")
+4. Click **Create**
+5. Vercel will automatically add:
    - `BLOB_READ_WRITE_TOKEN`
 
-### 4. Deploy!
+### 4. Enable Password Protection (Recommended!)
 
-1. Click **Deploy** in the Vercel dashboard
+Protect your app with a simple password - no code changes needed:
+
+1. In your Vercel project dashboard, go to **Settings** → **Deployment Protection**
+2. Enable **Password Protection** or **Vercel Authentication**
+3. For **Password Protection** (simplest):
+   - Toggle it on
+   - Set a password (save it somewhere safe!)
+   - Anyone visiting your site must enter this password
+   - **Password is saved in browser** - you only need to enter it once per device/browser
+4. Click **Save**
+
+Now your app is protected! Only people with the password can access it. The password is remembered on each device, so you won't need to re-enter it every visit. Perfect for personal use without the complexity of user accounts.
+
+### 5. Deploy!
+
+1. Click **Deploy** in the Vercel dashboard (or go to **Deployments** tab)
 2. Wait for the build to complete (~2-3 minutes)
 3. Your app will be live at `https://your-project.vercel.app` 🎉
 
-### 5. First Visit Setup
+### 6. First Visit Setup
 
 When you first visit your deployed app, the database tables will be created automatically, and 14 starter guitars will be seeded into your collection.
 
