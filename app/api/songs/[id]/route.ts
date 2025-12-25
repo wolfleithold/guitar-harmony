@@ -1,14 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSong, updateSong, deleteSong, Song } from "@/lib/db";
+import {
+  initDb,
+  getSong,
+  updateSong,
+  deleteSong,
+  Song,
+} from "@/lib/db-postgres";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await initDb();
     const { id } = await params;
     const songId = parseInt(id);
-    const song = getSong(songId);
+    const song = await getSong(songId);
 
     if (!song) {
       return NextResponse.json({ error: "Song not found" }, { status: 404 });
@@ -29,6 +36,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await initDb();
     const { id } = await params;
     const songId = parseInt(id);
     const body = await request.json();
@@ -38,11 +46,12 @@ export async function PUT(
       lyrics: body.lyrics,
       key: body.key,
       guitar: body.guitar,
+      guitar_id: body.guitar_id,
       readiness: body.readiness,
     };
 
-    updateSong(songId, song);
-    const updatedSong = getSong(songId);
+    await updateSong(songId, song);
+    const updatedSong = await getSong(songId);
 
     return NextResponse.json(updatedSong);
   } catch (error) {
@@ -59,9 +68,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await initDb();
     const { id } = await params;
     const songId = parseInt(id);
-    deleteSong(songId);
+    await deleteSong(songId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

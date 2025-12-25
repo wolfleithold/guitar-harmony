@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Readiness } from "@/types";
+import { Readiness, Guitar } from "@/types";
+import GuitarPickerModal from "@/components/GuitarPickerModal";
 
 export default function NewSong() {
   const router = useRouter();
@@ -11,10 +12,17 @@ export default function NewSong() {
     title: "",
     lyrics: "",
     key: "",
-    guitar: "",
+    guitar_id: null as number | null,
     readiness: "Writing" as Readiness,
   });
+  const [selectedGuitar, setSelectedGuitar] = useState<Guitar | null>(null);
+  const [showGuitarPicker, setShowGuitarPicker] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const handleGuitarSelect = (guitar: Guitar | null) => {
+    setSelectedGuitar(guitar);
+    setFormData({ ...formData, guitar_id: guitar?.id || null });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,22 +109,36 @@ export default function NewSong() {
           </div>
 
           <div>
-            <label
-              htmlFor="guitar"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-            >
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Guitar
             </label>
-            <input
-              type="text"
-              id="guitar"
-              value={formData.guitar}
-              onChange={(e) =>
-                setFormData({ ...formData, guitar: e.target.value })
-              }
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800 dark:text-white"
-              placeholder="e.g., Acoustic, Electric, Standard Tuning"
-            />
+            {selectedGuitar ? (
+              <div className="flex items-center gap-3">
+                <div className="flex-1 p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-900">
+                  <div className="font-medium text-gray-900 dark:text-white">
+                    {selectedGuitar.name}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {selectedGuitar.type}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGuitarPicker(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+                >
+                  Change
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowGuitarPicker(true)}
+                className="w-full py-3 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 font-medium"
+              >
+                + Choose Guitar
+              </button>
+            )}
           </div>
 
           <div>
@@ -224,6 +246,13 @@ export default function NewSong() {
             </Link>
           </div>
         </form>
+
+        <GuitarPickerModal
+          isOpen={showGuitarPicker}
+          selectedGuitarId={formData.guitar_id}
+          onSelect={handleGuitarSelect}
+          onClose={() => setShowGuitarPicker(false)}
+        />
       </div>
     </div>
   );

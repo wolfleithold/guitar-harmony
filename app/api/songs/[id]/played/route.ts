@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { markSongAsPlayed, getSong } from "@/lib/db";
+import { initDb, markSongAsPlayed } from "@/lib/db-postgres";
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await initDb();
     const { id } = await params;
     const songId = parseInt(id);
 
@@ -13,8 +14,7 @@ export async function POST(
       return NextResponse.json({ error: "Invalid song ID" }, { status: 400 });
     }
 
-    markSongAsPlayed(songId);
-    const updatedSong = getSong(songId);
+    const updatedSong = await markSongAsPlayed(songId);
 
     return NextResponse.json(updatedSong);
   } catch (error) {

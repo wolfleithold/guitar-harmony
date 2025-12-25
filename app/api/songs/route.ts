@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
+  initDb,
   getAllSongs,
   searchSongs,
   createSong,
   Song,
   Readiness,
-} from "@/lib/db";
+} from "@/lib/db-postgres";
 
 export async function GET(request: NextRequest) {
   try {
+    await initDb();
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get("q");
     const readiness = searchParams.get("readiness") as Readiness | null;
@@ -21,9 +23,9 @@ export async function GET(request: NextRequest) {
 
     let songs: Song[];
     if (query) {
-      songs = searchSongs(query, readiness || undefined);
+      songs = await searchSongs(query);
     } else {
-      songs = getAllSongs(
+      songs = await getAllSongs(
         readiness || undefined,
         sortBy || undefined,
         excludeArchived
@@ -42,16 +44,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    await initDb();
     const body = await request.json();
     const song: Song = {
       title: body.title || "Untitled",
       lyrics: body.lyrics || "",
       key: body.key || "",
       guitar: body.guitar || "",
+      guitar_id: body.guitar_id || null,
       readiness: body.readiness || "Writing",
     };
 
-    const id = createSong(song);
+    const id = await createSong(song);
     return NextResponse.json({ id, ...song }, { status: 201 });
   } catch (error) {
     console.error("Error creating song:", error);

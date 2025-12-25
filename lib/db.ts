@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import path from "path";
 import fs from "fs";
-import { Song, FileRecord, Readiness } from "@/types";
+import { Song, FileRecord, Readiness, Guitar, GuitarType } from "@/types";
 
 const dbPath = path.join(process.cwd(), "guitar-harmony.db");
 
@@ -49,7 +49,19 @@ function initDb(database: Database.Database) {
     );
   `);
 
-  // Create indexes
+  // Create guitars table
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS guitars (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK(type IN ('Acoustic', 'Electric', 'Bass', 'Other')),
+      notes TEXT,
+      image_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Create basic indexes
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_files_song_id ON files(song_id);
     CREATE INDEX IF NOT EXISTS idx_songs_title ON songs(title);
@@ -72,22 +84,93 @@ function initDb(database: Database.Database) {
   if (!columns.includes("play_count")) {
     database.exec(`ALTER TABLE songs ADD COLUMN play_count INTEGER DEFAULT 0;`);
   }
+  if (!columns.includes("guitar_id")) {
+    database.exec(
+      `ALTER TABLE songs ADD COLUMN guitar_id INTEGER REFERENCES guitars(id);`
+    );
+  }
+
+  // Create guitar_id index after column exists
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_songs_guitar_id ON songs(guitar_id);
+  `);
+
+  // Seed guitars if table is empty
+  const guitarCount = database
+    .prepare("SELECT COUNT(*) as count FROM guitars")
+    .get() as { count: number };
+  if (guitarCount.count === 0) {
+    seedGuitars(database);
+  }
 }
 
-export type { Song, FileRecord, Readiness };
+function seedGuitars(database: Database.Database) {
+  const guitars = [
+    {
+      name: "Martin D-28",
+      type: "Acoustic",
+      notes: "Classic dreadnought, great for strumming",
+    },
+    {
+      name: "Taylor 814ce",
+      type: "Acoustic",
+      notes: "Cutaway acoustic-electric",
+    },
+    { name: "Gibson J-45", type: "Acoustic", notes: "Vintage round shoulder" },
+    {
+      name: "Fender Stratocaster",
+      type: "Electric",
+      notes: "Versatile solid body",
+    },
+    { name: "Gibson Les Paul", type: "Electric", notes: "Classic rock tone" },
+    { name: "Fender Telecaster", type: "Electric", notes: "Country and rock" },
+    {
+      name: "PRS Custom 24",
+      type: "Electric",
+      notes: "Modern versatile electric",
+    },
+    {
+      name: "Ibanez RG",
+      type: "Electric",
+      notes: "Fast neck, great for shred",
+    },
+    { name: "Fender Precision Bass", type: "Bass", notes: "Classic P-Bass" },
+    { name: "Music Man StingRay", type: "Bass", notes: "Punchy active bass" },
+    { name: "Fender Jazz Bass", type: "Bass", notes: "Versatile J-Bass" },
+    {
+      name: "Classical Nylon",
+      type: "Acoustic",
+      notes: "Nylon string classical",
+    },
+    { name: "12-String Acoustic", type: "Acoustic", notes: "Rich, full sound" },
+    { name: "Resonator Guitar", type: "Other", notes: "Bluegrass and slide" },
+  ];
+
+  const stmt = database.prepare(`
+    INSERT INTO guitars (name, type, notes)
+    VALUES (?, ?, ?)
+  `);
+
+  for (const guitar of guitars) {
+    stmt.run(guitar.name, guitar.type, guitar.notes);
+  }
+}
+
+export type { Song, FileRecord, Readiness, Guitar, GuitarType };
 
 // Song CRUD operations
 export function createSong(song: Song): number {
   const db = getDb();
   const stmt = db.prepare(`
-    INSERT INTO songs (title, lyrics, key, guitar, readiness)
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO songs (title, lyrics, key, guitar, guitar_id, readiness)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
   const result = stmt.run(
     song.title,
     song.lyrics || "",
     song.key || "",
     song.guitar || "",
+    song.guitar_id || null,
     song.readiness || "Writing"
   );
   return result.lastInsertRowid as number;
@@ -95,8 +178,45 @@ export function createSong(song: Song): number {
 
 export function getSong(id: number): Song | undefined {
   const db = getDb();
-  const stmt = db.prepare("SELECT * FROM songs WHERE id = ?");
-  return stmt.get(id) as Song | undefined;
+  const stmt = db.prepare(`
+    SELECT s.*, 
+           g.id as guitar_id,
+           g.name as guitar_name, 
+           g.type as guitar_type,
+           g.notes as guitar_notes,
+           g.image_url as guitar_image_url
+    FROM songs s
+    LEFT JOIN guitars g ON s.guitar_id = g.id
+    WHERE s.id = ?
+  `);
+  const row = stmt.get(id) as any;
+  if (!row) return undefined;
+
+  const song: Song = {
+    id: row.id,
+    title: row.title,
+    lyrics: row.lyrics,
+    key: row.key,
+    guitar: row.guitar,
+    guitar_id: row.guitar_id,
+    readiness: row.readiness,
+    last_played_at: row.last_played_at,
+    play_count: row.play_count,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+  };
+
+  if (row.guitar_id) {
+    song.guitarInfo = {
+      id: row.guitar_id,
+      name: row.guitar_name,
+      type: row.guitar_type,
+      notes: row.guitar_notes,
+      image_url: row.guitar_image_url,
+    };
+  }
+
+  return song;
 }
 
 export function getAllSongs(
@@ -161,7 +281,7 @@ export function searchSongs(query: string, readiness?: Readiness): Song[] {
 export function updateSong(id: number, song: Partial<Song>): void {
   const db = getDb();
   const fields: string[] = [];
-  const values: (string | number)[] = [];
+  const values: (string | number | null)[] = [];
 
   if (song.title !== undefined) {
     fields.push("title = ?");
@@ -179,13 +299,17 @@ export function updateSong(id: number, song: Partial<Song>): void {
     fields.push("guitar = ?");
     values.push(song.guitar);
   }
+  if (song.guitar_id !== undefined) {
+    fields.push("guitar_id = ?");
+    values.push(song.guitar_id === null ? null : song.guitar_id);
+  }
   if (song.readiness !== undefined) {
     fields.push("readiness = ?");
     values.push(song.readiness);
   }
 
   fields.push("updated_at = CURRENT_TIMESTAMP");
-  values.push(id);
+  values.push(id as number);
 
   const stmt = db.prepare(`
     UPDATE songs SET ${fields.join(", ")}
@@ -285,4 +409,83 @@ export function ensureUploadsDir(): string {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
   return uploadsDir;
+}
+
+// Guitar CRUD operations
+export function createGuitar(guitar: Guitar): number {
+  const db = getDb();
+  const stmt = db.prepare(`
+    INSERT INTO guitars (name, type, notes, image_url)
+    VALUES (?, ?, ?, ?)
+  `);
+  const result = stmt.run(
+    guitar.name,
+    guitar.type,
+    guitar.notes || null,
+    guitar.image_url || null
+  );
+  return result.lastInsertRowid as number;
+}
+
+export function getGuitar(id: number): Guitar | undefined {
+  const db = getDb();
+  const stmt = db.prepare("SELECT * FROM guitars WHERE id = ?");
+  return stmt.get(id) as Guitar | undefined;
+}
+
+export function getAllGuitars(): Guitar[] {
+  const db = getDb();
+  const stmt = db.prepare("SELECT * FROM guitars ORDER BY type, name");
+  return stmt.all() as Guitar[];
+}
+
+export function searchGuitars(query: string): Guitar[] {
+  const db = getDb();
+  const stmt = db.prepare(`
+    SELECT * FROM guitars 
+    WHERE name LIKE ? OR type LIKE ? OR notes LIKE ?
+    ORDER BY type, name
+  `);
+  const searchTerm = `%${query}%`;
+  return stmt.all(searchTerm, searchTerm, searchTerm) as Guitar[];
+}
+
+export function updateGuitar(id: number, guitar: Partial<Guitar>): void {
+  const db = getDb();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  if (guitar.name !== undefined) {
+    fields.push("name = ?");
+    values.push(guitar.name);
+  }
+  if (guitar.type !== undefined) {
+    fields.push("type = ?");
+    values.push(guitar.type);
+  }
+  if (guitar.notes !== undefined) {
+    fields.push("notes = ?");
+    values.push(guitar.notes || null);
+  }
+  if (guitar.image_url !== undefined) {
+    fields.push("image_url = ?");
+    values.push(guitar.image_url || null);
+  }
+
+  if (fields.length === 0) return;
+
+  values.push(id);
+  const stmt = db.prepare(`
+    UPDATE guitars SET ${fields.join(", ")}
+    WHERE id = ?
+  `);
+  stmt.run(...values);
+}
+
+export function deleteGuitar(id: number): void {
+  const db = getDb();
+  // Note: Songs referencing this guitar will have guitar_id set to NULL (if we set up ON DELETE SET NULL)
+  // For now, we'll just delete the guitar
+  const stmt = db.prepare("DELETE FROM guitars WHERE id = ?");
+  stmt.run(id);
 }

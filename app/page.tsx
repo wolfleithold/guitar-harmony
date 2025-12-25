@@ -65,9 +65,11 @@ export default function Home() {
       }`;
       const response = await fetch(url);
       const data = await response.json();
-      setSongs(data);
+      // Ensure data is always an array
+      setSongs(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching songs:", error);
+      setSongs([]); // Set to empty array on error
     } finally {
       setLoading(false);
     }
@@ -86,6 +88,12 @@ export default function Home() {
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
               Guitar Harmony
             </h1>
+            <Link
+              href="/guitars"
+              className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium"
+            >
+              Guitar Catalog
+            </Link>
             <Link
               href="/archived"
               className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white font-medium"
