@@ -39,20 +39,28 @@ Vercel Blob is still available in the Storage tab:
 5. Vercel will automatically add:
    - `BLOB_READ_WRITE_TOKEN`
 
-### 4. Enable Password Protection (Recommended!)
+### 4. Set Your Password (Required!)
 
-Protect your app with a simple password - no code changes needed:
+Your app now has built-in password protection. Set your password:
 
-1. In your Vercel project dashboard, go to **Settings** → **Deployment Protection**
-2. Enable **Password Protection** or **Vercel Authentication**
-3. For **Password Protection** (simplest):
-   - Toggle it on
-   - Set a password (save it somewhere safe!)
-   - Anyone visiting your site must enter this password
-   - **Password is saved in browser** - you only need to enter it once per device/browser
+1. In Vercel dashboard, go to **Settings** → **Environment Variables**
+2. Click **Add New**
+3. Set:
+   - **Name:** `AUTH_PASSWORD`
+   - **Value:** Your desired password (e.g., "MySecretPass123")
+   - **Environment:** Production, Preview, Development (check all)
 4. Click **Save**
 
-Now your app is protected! Only people with the password can access it. The password is remembered on each device, so you won't need to re-enter it every visit. Perfect for personal use without the complexity of user accounts.
+**Important:** After adding the password, you must **redeploy** for it to take effect:
+
+- Go to **Deployments** → Click **⋮** on latest → **Redeploy**
+
+**How it works:**
+
+- Anyone visiting your site will see a password prompt
+- Password is saved in a cookie for 30 days
+- No need to re-enter on the same device/browser
+- Default password is `guitar123` if you don't set AUTH_PASSWORD
 
 ### 5. Deploy!
 
@@ -62,11 +70,15 @@ Now your app is protected! Only people with the password can access it. The pass
 
 ### 6. First Visit Setup
 
-When you first visit your deployed app, the database tables will be created automatically, and 14 starter guitars will be seeded into your collection.
+When you first visit your deployed app, you'll see a password prompt. Enter your password (or `guitar123` if you haven't set AUTH_PASSWORD yet), and you'll be logged in for 30 days.
 
 ## Environment Variables Summary
 
-All environment variables are automatically set by Vercel when you create the Postgres and Blob storage. You don't need to manually configure anything!
+Required environment variables:
+
+- **`POSTGRES_URL`** - Automatically set when you add Neon database
+- **`BLOB_READ_WRITE_TOKEN`** - Automatically set when you add Vercel Blob
+- **`AUTH_PASSWORD`** - You must set this manually (your app password)
 
 ## Local Development
 
@@ -77,6 +89,11 @@ If you want to test with Vercel services locally:
 3. Run `vercel link` in your project directory
 4. Run `vercel env pull .env.local` to download environment variables
 5. Start your dev server: `npm run dev`
+
+**For local testing without setting up Vercel:**
+
+- The default password is `guitar123` if AUTH_PASSWORD is not set
+- Visit `http://localhost:3000` and enter the password
 
 ## What Changed from SQLite?
 
